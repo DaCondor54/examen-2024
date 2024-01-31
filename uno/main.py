@@ -1,5 +1,6 @@
 import random
 import os
+import platform
 
 random.seed(0)
 class Card:
@@ -39,7 +40,9 @@ class Game:
     def game_loop(self):
         print('before playing 2nd to last card write uno')
         playerCount = input('how many players : ')
-        input('House rules : Stacked')
+        response = input('House rules : Stack draw + 2 (yes) / anything else is no : ')
+        if response == 'yes':
+            self.playingStacked = True
         self.players = [Player(x+1, self.initPlayerHands()) for x in range(int(playerCount))]
         for x in self.players:
             x.printHand()
@@ -47,7 +50,7 @@ class Game:
         self.currentColor = self.playedCards[-1].suit
         self.playerIndex = 0
         self.unos = []
-        self.stackedCards = 0
+        
         while self.run:
             previousError = ''
             validPlay = False
@@ -55,18 +58,21 @@ class Game:
 
 
             while not validPlay:
-                os.system('clear')
+                self.clearScreen()
                 print(f'the card is {self.playedCards[-1]}')
                 # self.players[self.playerIndex].printHand()
                 self.players[self.playerIndex].printHand()
                 # [x.printHand() for x in self.players]
                 if previousError != '':
                     print(previousError)
+                #if self.stackedCards != 0:
+                print(f'Stacked cards : {self.stackedCards} {self.playingStacked}')
                 response = input('\nWhat do you play : ')
                 if response == 'uno' and len(self.players[self.playerIndex].cards) == 2:
                     self.players[self.playerIndex].uno = True
                 elif response == '0':
                     self.drawCard(self.players[self.playerIndex])
+                    self.stackCards()
                     validPlay = True
                     continue
                 elif response.isnumeric() and int(response) > 0 and int(response) <= len(self.players[self.playerIndex].cards):
@@ -137,21 +143,30 @@ class Game:
             self.playerIndex = (self.playerIndex + 1) % len(self.players)
         elif newCard.special == 'draw2':
             playerdraw2 = self.players[(self.playerIndex + 1) % len(self.players)]
-            self.drawCard(playerdraw2)
-            self.drawCard(playerdraw2)
+            if self.playingStacked:
+                self.stackedCards += 2
+            else:
+                self.drawCard(playerdraw2)
+                self.drawCard(playerdraw2)
         elif newCard.special == 'reverse':
             self.players.reverse()
             self.playerIndex = (len(self.players) - self.playerIndex -1)
         elif newCard.special == 'draw4':
             playerdraw2 = self.players[(self.playerIndex+1) % len(self.players)]
-            self.drawCard(playerdraw2)
-            self.drawCard(playerdraw2)
-            self.drawCard(playerdraw2)
-            self.drawCard(playerdraw2)
+            if self.playingStacked:
+                self.stackedCards += 4
+            else:
+                self.drawCard(playerdraw2)
+                self.drawCard(playerdraw2)
+                self.drawCard(playerdraw2)
+                self.drawCard(playerdraw2)
             self.chooseColor()
             newCard.color = self.currentColor
         else:
             self.currentColor = newCard.suit
+        
+        if newCard.special != 'draw4' and newCard.special != 'draw2':
+            self.stackCards()
 
             
     def chooseColor(self):
@@ -182,7 +197,13 @@ class Game:
                 card.suit = ''
         self.deck += self.playedCards
         self.playedCards = [lastCard]
-
+    def stackCards(self):
+        if self.playingStacked:
+            for i in range(self.stackedCards):
+                self.drawCard(self.players[self.playerIndex])
+            self.stackedCards = 0
+    def clearScreen(self):
+        os.system('cls' if os.name=='nt' else 'clear')
 
 
 
